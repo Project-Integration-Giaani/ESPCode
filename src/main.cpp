@@ -40,12 +40,15 @@
 
 #include "SinricPro.h"
 #include "SinricProSwitch.h"
+#include <esp8266-google-home-notifier.h>
 
 #include <map>
 
 // Wifi credentials 
 #define WIFI_SSID "Minkmates"
 #define WIFI_PASS "Minkmaatstraat50"
+//#define WIFI_SSID "Definitely Not A Wifi"
+//#define WIFI_PASS "jkoy3240"
 // #define WIFI_SSID         "D.E-CAFE-GAST"
 // #define WIFI_PASS         ""
 
@@ -59,6 +62,8 @@
 #define BAUD_RATE 115200
 
 #define DEBOUNCE_TIME 250
+
+GoogleHomeNotifier ghn;
 
 typedef struct
 { // struct for the std::map below
@@ -110,11 +115,37 @@ void setupFlipSwitches()
 	}
 }
 
+void setupGoogleHomeNotifier() {
+  const char deviceName[] = "Office";
+
+  Serial.println("connecting to Google Home...");
+  if (ghn.device(deviceName, "en") != true) {
+    Serial.println(ghn.getLastError());
+    return;
+  }
+
+  Serial.print("found Google Home(");
+  Serial.print(ghn.getIPAddress());
+  Serial.print(":");
+  Serial.print(ghn.getPort());
+  Serial.println(")");
+
+}
+
+void GoogleHomeMessage(const char* message){
+	if (ghn.notify(message) != true) {
+    Serial.println(ghn.getLastError());
+    return;
+  }
+  Serial.println("Google Home Notifier meesage sent sccessfully.");
+}
+ 
 bool onPowerState(String deviceId, bool &state)
 {
 	Serial.printf("%s: %s\r\n", deviceId.c_str(), state ? "on" : "off");
 	int relayPIN = devices[deviceId].relayPIN; // get the relay pin for corresponding device
 	digitalWrite(relayPIN, !state);			   // set the new relay state
+	
 	return true;
 }
 
@@ -188,6 +219,10 @@ void setup()
 	setupRelays();
 	setupFlipSwitches();
 	setupWiFi();
+  	setupGoogleHomeNotifier();
+	GoogleHomeMessage("Office is online");
+	//delay(1000);
+	//GoogleHomeMessage("Hello Eric");
 	setupSinricPro();
 }
 
