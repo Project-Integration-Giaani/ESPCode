@@ -42,6 +42,11 @@
 #include "SinricProSwitch.h"
 #include <esp8266-google-home-notifier.h>
 
+#define TOUCH_CS 3
+#include <time.h>
+#include <TFT_eSPI.h>
+#include <string.h>
+
 // #include <MySQL_Connection.h>
 // #include <MySQL_Cursor.h>
 
@@ -67,6 +72,15 @@
 #define DEBOUNCE_TIME 250
 
 GoogleHomeNotifier ghn;
+
+TFT_eSPI tft = TFT_eSPI();
+
+bool alarm_set = false;
+
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 3600;
+const int   daylightOffset_sec = 3600;
+
 
 // WiFiClient client;
 // MySQL_Connection conn((Client *)&client);
@@ -139,6 +153,72 @@ void setupFlipSwitches()
 // 	}
 // }
 
+void printLocalTime(){
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("Failed to obtain time");
+    return;
+  }
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  String daytime=asctime(&timeinfo);
+  Serial.println("The needed string:"+daytime);
+  String day=daytime.substring(0,11)+=daytime.substring(20,24);
+  String time=daytime.substring(11,19);
+  tft.drawString(day,15,10,4);
+  tft.drawString(time,20,45,7);
+  Serial.print("Day of week: ");
+  Serial.println(&timeinfo, "%A");
+  Serial.print("Month: ");
+  Serial.println(&timeinfo, "%B");
+  Serial.print("Day of Month: ");
+  Serial.println(&timeinfo, "%d");
+  Serial.print("Year: ");
+  Serial.println(&timeinfo, "%Y");
+  Serial.print("Hour: ");
+  Serial.println(&timeinfo, "%H");
+  Serial.print("Hour (12 hour format): ");
+  Serial.println(&timeinfo, "%I");
+  Serial.print("Minute: ");
+  Serial.println(&timeinfo, "%M");
+  Serial.print("Second: ");
+  Serial.println(&timeinfo, "%S");
+  char timeWeekDay[10];
+  strftime(timeWeekDay,10, "%A", &timeinfo);
+  Serial.println(timeWeekDay);
+  Serial.println();
+
+  if (!alarm_set) {
+      
+    // // Set the alarm with the received time
+    
+    // Serial.print("Setting alarm with time: ");
+    // Serial.println(alarmTime);
+    String alarmTime_c= Serial.readStringUntil('\n'); 
+    alarmTime_c +="\n";
+    Serial.println("Wake up alarm set to:"+ alarmTime_c);
+    if(daytime == alarmTime_c){
+      tft.drawString("WAAAAKEEEE UP",30,100,4);
+      Serial.println("WAAAAKEEEE UP");
+      alarm_set=true;
+    }
+  }
+
+  
+}
+
+void setup_tft(){
+	tft.init();
+	tft.fillScreen(TFT_RED);
+	tft.setRotation(1);
+	tft.setTextWrap(true,true);
+}
+
+void time_setup(){
+	// Init and get the time
+	configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+	printLocalTime();
+
+}
 void setupGoogleHomeNotifier() {
   const char deviceName[] = "Office";
 
@@ -249,10 +329,13 @@ void setup()
 	//GoogleHomeMessage("Hello Eric");
 	//setupSQL();
 	setupSinricPro();
+	setup_tft();
+	time_setup();
 }
 
 void loop()
 {
 	SinricPro.handle();
 	handleFlipSwitches();
+	printLocalTime();
 }
