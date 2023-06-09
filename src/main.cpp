@@ -42,15 +42,18 @@
 #include "SinricProSwitch.h"
 #include <esp8266-google-home-notifier.h>
 
+// #include <MySQL_Connection.h>
+// #include <MySQL_Cursor.h>
+
 #include <map>
 
 // Wifi credentials 
-#define WIFI_SSID "Minkmates"
-#define WIFI_PASS "Minkmaatstraat50"
+// #define WIFI_SSID "Minkmates"
+// #define WIFI_PASS "Minkmaatstraat50"
 //#define WIFI_SSID "Definitely Not A Wifi"
 //#define WIFI_PASS "jkoy3240"
-// #define WIFI_SSID         "D.E-CAFE-GAST"
-// #define WIFI_PASS         ""
+#define WIFI_SSID         "D.E-CAFE-GAST"
+#define WIFI_PASS         ""
 
 //SinricPro credentials
 #define APP_KEY "75f4059f-33e0-4266-86f2-e646618364f8"										   
@@ -64,6 +67,13 @@
 #define DEBOUNCE_TIME 250
 
 GoogleHomeNotifier ghn;
+
+// WiFiClient client;
+// MySQL_Connection conn((Client *)&client);
+// IPAddress server_addr(20,74,46,0);  // IP of the MySQL *server* here
+// char SQLuser[] = "nesnos";              // MySQL user login username
+// char password[] = "Axeltalksalot3!";        // MySQL user login password
+
 
 typedef struct
 { // struct for the std::map below
@@ -114,6 +124,20 @@ void setupFlipSwitches()
 		pinMode(flipSwitchPIN, INPUT);					// set the flipSwitch pin to INPUT
 	}
 }
+
+// void setupSQL()
+// {
+// 	// if (!WiFi.hostByName("giaani-mysql.mysql.database.azure.com", server_addr)) {
+//   	// 	Serial.println("Failed to resolve server name");
+//   	// return;
+// 	// }
+// 	Serial.println("Connecting to SQL Server...");
+// 	if (conn.connect(server_addr, 3306, SQLuser, password)) {
+// 		Serial.println("Connected to SQL Server successfully.");
+// 	} else {
+// 		Serial.println("Connection to SQL Server failed.");
+// 	}
+// }
 
 void setupGoogleHomeNotifier() {
   const char deviceName[] = "Office";
@@ -189,13 +213,13 @@ void setupWiFi()
 {
 	Serial.printf("\r\n[Wifi]: Connecting");
 	WiFi.begin(WIFI_SSID, WIFI_PASS);
-
+	
 	while (WiFi.status() != WL_CONNECTED)
 	{
 		Serial.printf(".");
 		delay(250);
 	}
-	digitalWrite(LED_BUILTIN, HIGH);
+	//digitalWrite(LED_BUILTIN, HIGH);
 	Serial.printf("connected!\r\n[WiFi]: IP-Address is %s\r\n", WiFi.localIP().toString().c_str());
 }
 
@@ -219,10 +243,11 @@ void setup()
 	setupRelays();
 	setupFlipSwitches();
 	setupWiFi();
-  	setupGoogleHomeNotifier();
-	GoogleHomeMessage("Office is online");
+  	//setupGoogleHomeNotifier();
+	//GoogleHomeMessage("Office is online");
 	//delay(1000);
 	//GoogleHomeMessage("Hello Eric");
+	//setupSQL();
 	setupSinricPro();
 }
 
