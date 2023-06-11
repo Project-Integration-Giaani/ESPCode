@@ -47,6 +47,8 @@
 #include <TFT_eSPI.h>
 #include <string.h>
 
+#include <list>
+
 // #include <MySQL_Connection.h>
 // #include <MySQL_Cursor.h>
 
@@ -119,7 +121,7 @@ typedef struct
 std::map<int, flipSwitchConfig_t> flipSwitches; // this map is used to map flipSwitch PINs to deviceId and handling debounce and last flipSwitch state checks
 												// it will be setup in "setupFlipSwitches" function, using informations from devices map
 
-
+std::list<String> alarmList;
 /*<---------------------------->
   <----- SET UP FUNCTIONS ----->
   <---------------------------->*/
