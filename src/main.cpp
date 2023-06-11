@@ -153,57 +153,58 @@ void setupFlipSwitches()
 // 	}
 // }
 
-void printLocalTime(){
-  struct tm timeinfo;
-  if(!getLocalTime(&timeinfo)){
-    Serial.println("Failed to obtain time");
-    return;
-  }
-  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
-  String daytime=asctime(&timeinfo);
-  Serial.println("The needed string:"+daytime);
-  String day=daytime.substring(0,11)+=daytime.substring(20,24);
-  String time=daytime.substring(11,19);
-  tft.drawString(day,15,10,4);
-  tft.drawString(time,20,45,7);
-  Serial.print("Day of week: ");
-  Serial.println(&timeinfo, "%A");
-  Serial.print("Month: ");
-  Serial.println(&timeinfo, "%B");
-  Serial.print("Day of Month: ");
-  Serial.println(&timeinfo, "%d");
-  Serial.print("Year: ");
-  Serial.println(&timeinfo, "%Y");
-  Serial.print("Hour: ");
-  Serial.println(&timeinfo, "%H");
-  Serial.print("Hour (12 hour format): ");
-  Serial.println(&timeinfo, "%I");
-  Serial.print("Minute: ");
-  Serial.println(&timeinfo, "%M");
-  Serial.print("Second: ");
-  Serial.println(&timeinfo, "%S");
-  char timeWeekDay[10];
-  strftime(timeWeekDay,10, "%A", &timeinfo);
-  Serial.println(timeWeekDay);
-  Serial.println();
+void printLocalTime() {
+	struct tm timeinfo;
+	if (!getLocalTime(&timeinfo))
+	{
+		Serial.println("Failed to obtain time");
+		return;
+	}
+	Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+	String daytime = asctime(&timeinfo);
+	Serial.println("The needed string:" + daytime);
+	String day = daytime.substring(0, 11) += daytime.substring(20, 24);
+	String time = daytime.substring(11, 19);
+	tft.drawString(day, 15, 10, 4);
+	tft.drawString(time, 20, 45, 7);
+	Serial.print("Day of week: ");
+	Serial.println(&timeinfo, "%A");
+	Serial.print("Month: ");
+	Serial.println(&timeinfo, "%B");
+	Serial.print("Day of Month: ");
+	Serial.println(&timeinfo, "%d");
+	Serial.print("Year: ");
+	Serial.println(&timeinfo, "%Y");
+	Serial.print("Hour: ");
+	Serial.println(&timeinfo, "%H");
+	Serial.print("Hour (12 hour format): ");
+	Serial.println(&timeinfo, "%I");
+	Serial.print("Minute: ");
+	Serial.println(&timeinfo, "%M");
+	Serial.print("Second: ");
+	Serial.println(&timeinfo, "%S");
+	char timeWeekDay[10];
+	strftime(timeWeekDay, 10, "%A", &timeinfo);
+	Serial.println(timeWeekDay);
+	Serial.println();
 
-  if (!alarm_set) {
-      
-    // // Set the alarm with the received time
-    
-    // Serial.print("Setting alarm with time: ");
-    // Serial.println(alarmTime);
-    String alarmTime_c= Serial.readStringUntil('\n'); 
-    alarmTime_c +="\n";
-    Serial.println("Wake up alarm set to:"+ alarmTime_c);
-    if(daytime == alarmTime_c){
-      tft.drawString("WAAAAKEEEE UP",30,100,4);
-      Serial.println("WAAAAKEEEE UP");
-      alarm_set=true;
-    }
-  }
+	if (!alarm_set)
+	{
 
-  
+		// // Set the alarm with the received time
+
+		// Serial.print("Setting alarm with time: ");
+		// Serial.println(alarmTime);
+		String alarmTime_c = Serial.readStringUntil('\n');
+		alarmTime_c += "\n";
+		Serial.println("Wake up alarm set to:" + alarmTime_c);
+		if (daytime == alarmTime_c)
+		{
+			tft.drawString("WAAAAKEEEE UP", 30, 100, 4);
+			Serial.println("WAAAAKEEEE UP");
+			alarm_set = true;
+		}
+	}
 }
 
 void setup_tft(){
