@@ -76,21 +76,11 @@ MAX30105 particleSensor;
 #define APP_SECRET "671516bc-99cf-4b1b-8e4a-4f13ef2353a6-14f8dad9-ec0d-4b67-be39-206bee47554c" 
 
 // comment the following line if you use a toggle switches instead of tactile buttons
- #define TACTILE_BUTTON 1
+#define TACTILE_BUTTON 1
 
 #define BAUD_RATE 115200
 
 #define DEBOUNCE_TIME 250
-
-GoogleHomeNotifier ghn;
-
-TFT_eSPI tft = TFT_eSPI();
-
-bool alarm_set = false;
-
-const char* ntpServer = "pool.ntp.org";
-const long  gmtOffset_sec = 3600;
-const int   daylightOffset_sec = 3600;
 
 
 // WiFiClient client;
@@ -102,6 +92,16 @@ const int   daylightOffset_sec = 3600;
 /*<------------------------->
   <----GLOBAL VARIABLES ---->
   <------------------------->*/
+
+GoogleHomeNotifier ghn;
+
+TFT_eSPI tft = TFT_eSPI();
+
+//bool alarm_set = false;
+
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 3600;
+const int   daylightOffset_sec = 3600;
 
 
 typedef struct
@@ -302,6 +302,14 @@ void handleFlipSwitches()
 	}
 }
 
+void checkAlarms() {
+	if (!alarmList.empty()) {
+		for(auto &alarm : alarmList) {
+
+		}
+	}
+}
+
 void printLocalTime() {
 	struct tm timeinfo;
 	if (!getLocalTime(&timeinfo))
@@ -337,23 +345,23 @@ void printLocalTime() {
 	Serial.println(timeWeekDay);
 	Serial.println();
 
-	if (!alarm_set)
-	{
+	// if (!alarm_set)
+	// {
 
-		// // Set the alarm with the received time
+	// 	// // Set the alarm with the received time
 
-		// Serial.print("Setting alarm with time: ");
-		// Serial.println(alarmTime);
-		String alarmTime_c = Serial.readStringUntil('\n');
-		alarmTime_c += "\n";
-		Serial.println("Wake up alarm set to:" + alarmTime_c);
-		if (daytime == alarmTime_c)
-		{
-			tft.drawString("WAAAAKEEEE UP", 30, 100, 4);
-			Serial.println("WAAAAKEEEE UP");
-			alarm_set = true;
-		}
-	}
+	// 	// Serial.print("Setting alarm with time: ");
+	// 	// Serial.println(alarmTime);
+	// 	String alarmTime_c = Serial.readStringUntil('\n');
+	// 	alarmTime_c += "\n";
+	// 	Serial.println("Wake up alarm set to:" + alarmTime_c);
+	// 	if (daytime == alarmTime_c)
+	// 	{
+	// 		tft.drawString("WAAAAKEEEE UP", 30, 100, 4);
+	// 		Serial.println("WAAAAKEEEE UP");
+	// 		alarm_set = true;
+	// 	}
+	// }
 }
 
 void setup()
