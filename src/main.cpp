@@ -52,6 +52,8 @@
 #include "heartRate.h"
 MAX30105 particleSensor;
 
+#include <list>
+
 const byte RATE_SIZE = 4; //Increase this for more averaging. 4 is good.
 byte rates[RATE_SIZE]; //Array of heart rates
 byte rateSpot = 0;
@@ -130,6 +132,8 @@ typedef struct
 
 std::map<int, flipSwitchConfig_t> flipSwitches; // this map is used to map flipSwitch PINs to deviceId and handling debounce and last flipSwitch state checks
 												// it will be setup in "setupFlipSwitches" function, using informations from devices map
+
+std::list<String> alarmList;
 
 /*<--------------------------->
   <------ USE FUNCTIONS ------>
