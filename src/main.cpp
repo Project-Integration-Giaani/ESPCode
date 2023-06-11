@@ -46,6 +46,11 @@
 #include <time.h>
 #include <TFT_eSPI.h>
 #include <string.h>
+#include <Wire.h>
+#include "MAX30105.h"
+
+#include "heartRate.h"
+MAX30105 particleSensor;
 
 // #include <MySQL_Connection.h>
 // #include <MySQL_Cursor.h>
@@ -119,6 +124,36 @@ typedef struct
 std::map<int, flipSwitchConfig_t> flipSwitches; // this map is used to map flipSwitch PINs to deviceId and handling debounce and last flipSwitch state checks
 												// it will be setup in "setupFlipSwitches" function, using informations from devices map
 
+/*<--------------------------->
+  <------ USE FUNCTIONS ------>
+  <--------------------------->*/
+
+void GoogleHomeMessage(const char* message){
+	if (ghn.notify(message) != true) {
+    Serial.println(ghn.getLastError());
+    return;
+  }
+  Serial.println("Google Home Notifier meesage sent sccessfully.");
+}
+ 
+void emergency() {
+	//send to database emergency
+	GoogleHomeMessage("Emergency detected, notifying nurse");
+}
+
+bool onPowerState(String deviceId, bool &state)
+{
+	Serial.printf("%s: %s\r\n", deviceId.c_str(), state ? "on" : "off");
+	int relayPIN = devices[deviceId].relayPIN; // get the relay pin for corresponding device
+	digitalWrite(relayPIN, !state);			   // set the new relay state
+
+	if (relayPIN == EMERGENCY_PIN && state == true) {
+		emergency();
+	}
+	
+	return true;
+}
+
 
 /*<---------------------------->
   <----- SET UP FUNCTIONS ----->
@@ -187,7 +222,7 @@ void setup_tft(){
 void time_setup(){
 	// Init and get the time
 	configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-	printLocalTime();
+	//printLocalTime();
 
 }
 void setupGoogleHomeNotifier() {
@@ -220,36 +255,6 @@ void setupGoogleHomeNotifier() {
 // 		Serial.println("Connection to SQL Server failed.");
 // 	}
 // }
-
-/*<--------------------------->
-  <------ USE FUNCTIONS ------>
-  <--------------------------->*/
-
-void GoogleHomeMessage(const char* message){
-	if (ghn.notify(message) != true) {
-    Serial.println(ghn.getLastError());
-    return;
-  }
-  Serial.println("Google Home Notifier meesage sent sccessfully.");
-}
- 
-void emergency() {
-	//send to database emergency
-	GoogleHomeMessage("Emergency detected, notifying nurse");
-}
-
-bool onPowerState(String deviceId, bool &state)
-{
-	Serial.printf("%s: %s\r\n", deviceId.c_str(), state ? "on" : "off");
-	int relayPIN = devices[deviceId].relayPIN; // get the relay pin for corresponding device
-	digitalWrite(relayPIN, !state);			   // set the new relay state
-
-	if (relayPIN == EMERGENCY_PIN && state == true) {
-		emergency();
-	}
-	
-	return true;
-}
 
 /*<-------------------------->
   <----- LOOP FUNCTIONS ----->
