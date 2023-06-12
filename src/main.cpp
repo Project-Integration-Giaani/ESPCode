@@ -58,6 +58,9 @@ MAX30105 particleSensor;
 
 #include <list>
 
+#include <Adafruit_Sensor.h>
+#include <DHT.h>
+
 const byte RATE_SIZE = 4; //Increase this for more averaging. 4 is good.
 byte rates[RATE_SIZE]; //Array of heart rates
 byte rateSpot = 0;
@@ -102,6 +105,10 @@ int beatAvg;
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
 
+#define DHTPIN 15         // Pin connected to the DHT11 sensor
+#define DHTTYPE DHT11    // DHT sensor type
+
+
 // WiFiClient client;
 // MySQL_Connection conn((Client *)&client);
 // IPAddress server_addr(20,74,46,0);  // IP of the MySQL *server* here
@@ -119,6 +126,9 @@ GoogleHomeNotifier ghn;
 bool alarm_set = false;
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+
+DHT dht(DHTPIN, DHTTYPE); // Initialize the DHT sensor
 
 
 
@@ -257,7 +267,7 @@ void setup_display(){
 	display.setTextColor(WHITE);
 	display.setCursor(0, 0);
 	// Display static text
-	display.println("I work");
+	display.println("I work 2");
 	display.display(); 
 	delay(100);
 }
@@ -456,8 +466,24 @@ void get_heartbeat(){
   Serial.println();
 }
 
-void setup()
-{
+void getTempHumidity(){
+	float temperature = dht.readTemperature();    // Read temperature in Celsius
+	float humidity = dht.readHumidity();          // Read humidity
+
+	if (isnan(temperature) || isnan(humidity)) {  // Check if any reading failed
+		Serial.println("Failed to read from DHT sensor!");
+		return;
+	}
+
+	Serial.print("Temperature: ");
+	Serial.print(temperature);
+	Serial.print(" °C\t");
+	Serial.print("Humidity: ");
+	Serial.print(humidity);
+	Serial.println(" %");
+}
+
+void setup() {
 	Serial.begin(BAUD_RATE);
 	Serial.printf("Starting...\r\n");
 	setupRelays();
@@ -469,6 +495,7 @@ void setup()
 	setupSinricPro();
 	time_setup();
 	setup_heartbeat_sensor();
+	dht.begin();
 
 
 	//setupSQL();
@@ -485,4 +512,5 @@ void loop()
 	//handleFlipSwitches();
 	printLocalTime();
 	get_heartbeat();
+	getTempHumidity();
 }
