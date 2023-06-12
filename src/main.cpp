@@ -42,12 +42,16 @@
 #include "SinricProSwitch.h"
 #include <esp8266-google-home-notifier.h>
 
-#define TOUCH_CS 3
+//#define TOUCH_CS 3
 #include <time.h>
-#include <TFT_eSPI.h>
+// #include <TFT_eSPI.h>
 #include <string.h>
+
 #include <Wire.h>
 #include "MAX30105.h"
+
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 
 #include "heartRate.h"
 MAX30105 particleSensor;
@@ -71,10 +75,17 @@ int beatAvg;
 // Wifi credentials 
 // #define WIFI_SSID "Minkmates"
 // #define WIFI_PASS "Minkmaatstraat50"
-//#define WIFI_SSID "Definitely Not A Wifi"
-//#define WIFI_PASS "jkoy3240"
-#define WIFI_SSID         "D.E-CAFE-GAST"
-#define WIFI_PASS         ""
+// #define WIFI_SSID "Definitely Not A Wifi"
+// #define WIFI_PASS "jkoy3240"
+#define WIFI_SSID "D.E-CAFE-GAST"
+#define WIFI_PASS ""
+// #define WIFI_SSID "iPhone de Ines"
+// #define WIFI_PASS "inesparletropbeaucoup"
+// #define WIFI_SSID "NESNOS"
+// #define WIFI_PASS "princessenesnos"
+// #define WIFI_SSID "AXEL_DESKTOP"
+// #define WIFI_PASS "azulejo38!"
+
 
 //SinricPro credentials
 #define APP_KEY "75f4059f-33e0-4266-86f2-e646618364f8"										   
@@ -87,6 +98,9 @@ int beatAvg;
 
 #define DEBOUNCE_TIME 250
 
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+
 
 // WiFiClient client;
 // MySQL_Connection conn((Client *)&client);
@@ -94,19 +108,19 @@ int beatAvg;
 // char SQLuser[] = "nesnos";              // MySQL user login username
 // char password[] = "Axeltalksalot3!";        // MySQL user login password
 
-/*<------------------------->
-  <----GLOBAL VARIABLES ---->
-  <------------------------->*/
+/*<-------------------------->
+  <---- GLOBAL VARIABLES ---->
+  <-------------------------->*/
 
 GoogleHomeNotifier ghn;
 
-TFT_eSPI tft = TFT_eSPI();
+// TFT_eSPI tft = TFT_eSPI();
 
-//bool alarm_set = false;
+bool alarm_set = false;
 
-const char* ntpServer = "pool.ntp.org";
-const long  gmtOffset_sec = 3600;
-const int   daylightOffset_sec = 3600;
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+
 
 
 typedef struct
@@ -223,14 +237,35 @@ void setupFlipSwitches()
 	}
 }
 
-void setup_tft(){
-	tft.init();
-	tft.fillScreen(TFT_RED);
-	tft.setRotation(1);
-	tft.setTextWrap(true,true);
+// void setup_tft(){
+// 	tft.init();
+// 	tft.fillScreen(TFT_RED);
+// 	tft.setRotation(1);
+// 	tft.setTextWrap(true,true);
+// 	Serial.println("TFT initialized");
+// }
+
+void setup_display(){
+	if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3D for 128x64
+		Serial.println(F("SSD1306 allocation failed"));
+		for(;;);
+  	}
+	delay(2000);
+	display.clearDisplay();
+
+	display.setTextSize(1);
+	display.setTextColor(WHITE);
+	display.setCursor(0, 0);
+	// Display static text
+	display.println("I work");
+	display.display(); 
+	delay(100);
 }
 
 void time_setup(){
+	const char* ntpServer = "pool.ntp.org";
+	const long  gmtOffset_sec = 3600;
+	const int   daylightOffset_sec = 3600;
 	// Init and get the time
 	configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 	//printLocalTime();
@@ -241,6 +276,7 @@ void setupGoogleHomeNotifier() {
 
   Serial.println("connecting to Google Home...");
   if (ghn.device(deviceName, "en") != true) {
+	Serial.println("Google Home connection failed");
     Serial.println(ghn.getLastError());
     return;
   }
@@ -341,8 +377,8 @@ void printLocalTime() {
 	Serial.println("The needed string:" + daytime);
 	String day = daytime.substring(0, 11) += daytime.substring(20, 24);
 	String time = daytime.substring(11, 19);
-	tft.drawString(day, 15, 10, 4);
-	tft.drawString(time, 20, 45, 7);
+	// tft.drawString(day, 15, 10, 4);
+	// tft.drawString(time, 20, 45, 7);
 	Serial.print("Day of week: ");
 	Serial.println(&timeinfo, "%A");
 	Serial.print("Month: ");
@@ -364,23 +400,23 @@ void printLocalTime() {
 	Serial.println(timeWeekDay);
 	Serial.println();
 
-	// if (!alarm_set)
-	// {
+	if (!alarm_set)
+	{
 
-	// 	// // Set the alarm with the received time
+		// // Set the alarm with the received time
 
-	// 	// Serial.print("Setting alarm with time: ");
-	// 	// Serial.println(alarmTime);
-	// 	String alarmTime_c = Serial.readStringUntil('\n');
-	// 	alarmTime_c += "\n";
-	// 	Serial.println("Wake up alarm set to:" + alarmTime_c);
-	// 	if (daytime == alarmTime_c)
-	// 	{
-	// 		tft.drawString("WAAAAKEEEE UP", 30, 100, 4);
-	// 		Serial.println("WAAAAKEEEE UP");
-	// 		alarm_set = true;
-	// 	}
-	// }
+		// Serial.print("Setting alarm with time: ");
+		// Serial.println(alarmTime);
+		String alarmTime_c = Serial.readStringUntil('\n');
+		alarmTime_c += "\n";
+		Serial.println("Wake up alarm set to:" + alarmTime_c);
+		if (daytime == alarmTime_c)
+		{
+			//tft.drawString("WAAAAKEEEE UP", 30, 100, 4);
+			Serial.println("WAAAAKEEEE UP");
+			alarm_set = true;
+		}
+	}
 }
 
 void get_heartbeat(){
@@ -427,22 +463,26 @@ void setup()
 	setupRelays();
 	setupFlipSwitches();
 	setupWiFi();
-  	//setupGoogleHomeNotifier();
+	setup_display();
+  	// setupGoogleHomeNotifier();
 	//GoogleHomeMessage("Office is online");
-	//delay(1000);
-	//GoogleHomeMessage("Hello Eric");
-	//setupSQL();
 	setupSinricPro();
-	setup_tft();
 	time_setup();
 	setup_heartbeat_sensor();
+
+
+	//setupSQL();
+	//setup_tft();
+
+	//delay(1000);
+	//GoogleHomeMessage("Hello Eric");
 }
 
 
 void loop()
 {
-	SinricPro.handle();
-	handleFlipSwitches();
+	//SinricPro.handle();
+	//handleFlipSwitches();
 	printLocalTime();
 	get_heartbeat();
 }
