@@ -38,44 +38,43 @@
 #include <WiFi.h>
 #endif
 
+// Google Nest Libraries
 #include "SinricPro.h"
 #include "SinricProSwitch.h"
 #include <esp8266-google-home-notifier.h>
 
 //#define TOUCH_CS 3
-#include <time.h>
-// #include <TFT_eSPI.h>
-#include <string.h>
+//#include <TFT_eSPI.h>
 
+//General libraries
+#include <string.h>
+#include <time.h> // For alarm
+#include <map>
+#include <list> // For alarm list 
+
+//Heart rate sensor libraries
 #include <Wire.h>
 #include "MAX30105.h"
+#include "heartRate.h"
 
+//OLED display libraries
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-#include "heartRate.h"
-MAX30105 particleSensor;
-
-#include <list>
-
+//Temperature and Humidity sensor libraries
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 
-const byte RATE_SIZE = 4; //Increase this for more averaging. 4 is good.
-byte rates[RATE_SIZE]; //Array of heart rates
-byte rateSpot = 0;
-long lastBeat = 0; //Time at which the last beat occurred
-
-float beatsPerMinute;
-int beatAvg;
+//SQl libraries
 // #include <MySQL_Connection.h>
 // #include <MySQL_Cursor.h>
 
-#include <map>
 
-#define EMERGENCY_PIN 32
+/*<-------------------------->
+  <---- GLOBAL VARIABLES ---->
+  <-------------------------->*/
 
-// Wifi credentials 
+// ----------------------------------- Wifi credentials -----------------------------------------------------
 // #define WIFI_SSID "Minkmates"
 // #define WIFI_PASS "Minkmaatstraat50"
 // #define WIFI_SSID "Definitely Not A Wifi"
@@ -115,9 +114,8 @@ int beatAvg;
 // char SQLuser[] = "nesnos";              // MySQL user login username
 // char password[] = "Axeltalksalot3!";        // MySQL user login password
 
-/*<-------------------------->
-  <---- GLOBAL VARIABLES ---->
-  <-------------------------->*/
+
+#define EMERGENCY_PIN 32
 
 GoogleHomeNotifier ghn;
 
@@ -127,11 +125,16 @@ bool alarm_set = false;
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
-
 DHT dht(DHTPIN, DHTTYPE); // Initialize the DHT sensor
 
+MAX30105 particleSensor;
 
-
+const byte RATE_SIZE = 4; //Increase this for more averaging. 4 is good.
+byte rates[RATE_SIZE]; //Array of heart rates
+byte rateSpot = 0;
+long lastBeat = 0; //Time at which the last beat occurred
+float beatsPerMinute;
+int beatAvg;
 
 typedef struct
 { // struct for the std::map below
@@ -172,7 +175,8 @@ void GoogleHomeMessage(const char* message){
 }
  
 void emergency() {
-	//send to database emergency
+	//TODO add to json file emergency
+	//TODO emergency sound (buzzer)
 	GoogleHomeMessage("Emergency detected, notifying nurse");
 }
 
@@ -255,7 +259,7 @@ void setupFlipSwitches()
 // 	Serial.println("TFT initialized");
 // }
 
-void setup_display(){
+void setupDisplay(){
 	if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3D for 128x64
 		Serial.println(F("SSD1306 allocation failed"));
 		for(;;);
@@ -272,7 +276,7 @@ void setup_display(){
 	delay(100);
 }
 
-void time_setup(){
+void setupTime(){
 	const char* ntpServer = "pool.ntp.org";
 	const long  gmtOffset_sec = 3600;
 	const int   daylightOffset_sec = 3600;
@@ -299,18 +303,18 @@ void setupGoogleHomeNotifier() {
 
 }
 
-void setup_heartbeat_sensor(){
+void setupHeartbeatSensor(){
 	// Initialize sensor
-  if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) //Use default I2C port, 400kHz speed
-  {
-    Serial.println("MAX30105 was not found. Please check wiring/power. ");
-    while (1);
-  }
-  Serial.println("Place your index finger on the sensor with steady pressure.");
+	if (!particleSensor.begin(Wire, I2C_SPEED_FAST)) //Use default I2C port, 400kHz speed
+	{
+		Serial.println("MAX30105 was not found. Please check wiring/power. ");
+		while (1);
+	}
+	Serial.println("Place your index finger on the sensor with steady pressure.");
 
-  particleSensor.setup(); //Configure sensor with default settings
-  particleSensor.setPulseAmplitudeRed(0x0A); //Turn Red LED to low to indicate sensor is running
-  particleSensor.setPulseAmplitudeGreen(0); //Turn off Green LED
+	particleSensor.setup(); //Configure sensor with default settings
+	particleSensor.setPulseAmplitudeRed(0x0A); //Turn Red LED to low to indicate sensor is running
+	particleSensor.setPulseAmplitudeGreen(0); //Turn off Green LED
 }
 
 // void setupSQL()
@@ -367,13 +371,7 @@ void handleFlipSwitches()
 	}
 }
 
-void checkAlarms() {
-	if (!alarmList.empty()) {
-		for(auto &alarm : alarmList) {
 
-		}
-	}
-}
 
 void printLocalTime() {
 	struct tm timeinfo;
@@ -387,6 +385,7 @@ void printLocalTime() {
 	Serial.println("The needed string:" + daytime);
 	String day = daytime.substring(0, 11) += daytime.substring(20, 24);
 	String time = daytime.substring(11, 19);
+	//TODO change TFT to other display type
 	// tft.drawString(day, 15, 10, 4);
 	// tft.drawString(time, 20, 45, 7);
 	Serial.print("Day of week: ");
@@ -410,63 +409,87 @@ void printLocalTime() {
 	Serial.println(timeWeekDay);
 	Serial.println();
 
-	if (!alarm_set)
-	{
+	// if (!alarm_set)
+	// {
 
-		// // Set the alarm with the received time
+	// 	// // Set the alarm with the received time
 
-		// Serial.print("Setting alarm with time: ");
-		// Serial.println(alarmTime);
-		String alarmTime_c = Serial.readStringUntil('\n');
-		alarmTime_c += "\n";
-		Serial.println("Wake up alarm set to:" + alarmTime_c);
-		if (daytime == alarmTime_c)
-		{
-			//tft.drawString("WAAAAKEEEE UP", 30, 100, 4);
-			Serial.println("WAAAAKEEEE UP");
-			alarm_set = true;
+	// 	// Serial.print("Setting alarm with time: ");
+	// 	// Serial.println(alarmTime);
+	// 	String alarmTime_c = Serial.readStringUntil('\n');
+	// 	alarmTime_c += "\n";
+	// 	Serial.println("Wake up alarm set to:" + alarmTime_c);
+	// 	if (daytime == alarmTime_c)
+	// 	{
+	// 		//tft.drawString("WAAAAKEEEE UP", 30, 100, 4);
+	// 		Serial.println("WAAAAKEEEE UP");
+	// 		alarm_set = true;
+	// 	}
+	// }
+}
+
+void checkAlarms() {
+	struct tm timeinfo;
+	if (!getLocalTime(&timeinfo)) {
+		Serial.println("Failed to obtain time");
+		return;
+	}
+	String daytime = asctime(&timeinfo);
+
+	if (!alarmList.empty()) {
+		for(auto it = alarmList.begin(); alarmList.end() != it;) {
+			if (*it == daytime) {
+				//TODO: play alarm sound
+				//TODO: Display alarm on screen
+				//TODO: Send alarm to Google Home with message taken from json file (title of alarm)
+				it = alarmList.erase(it);
+			} else {
+				++it;
+			}
 		}
 	}
 }
 
-void get_heartbeat(){
+void getHeartbeat(){
+	
 	long irValue = particleSensor.getIR();
 
-  if (checkForBeat(irValue) == true)
-  {
-    //We sensed a beat!
-    long delta = millis() - lastBeat;
-    lastBeat = millis();
+	if (checkForBeat(irValue) == true){
+		//We sensed a beat!
+		long delta = millis() - lastBeat;
+		lastBeat = millis();
 
-    beatsPerMinute = 60 / (delta / 1000.0);
+		beatsPerMinute = 60 / (delta / 1000.0);
 
-    if (beatsPerMinute < 255 && beatsPerMinute > 20)
-    {
-      rates[rateSpot++] = (byte)beatsPerMinute; //Store this reading in the array
-      rateSpot %= RATE_SIZE; //Wrap variable
+		if (beatsPerMinute < 255 && beatsPerMinute > 20) {
+			rates[rateSpot++] = (byte)beatsPerMinute; //Store this reading in the array
+			rateSpot %= RATE_SIZE; //Wrap variable
 
-      //Take average of readings
-      beatAvg = 0;
-      for (byte x = 0 ; x < RATE_SIZE ; x++)
-        beatAvg += rates[x];
-      beatAvg /= RATE_SIZE;
-    }
-  }
+			//Take average of readings
+			beatAvg = 0;
+			for (byte x = 0 ; x < RATE_SIZE ; x++)
+				beatAvg += rates[x];
+			beatAvg /= RATE_SIZE;
+		}
+  	}
 
-  Serial.print("IR=");
-  Serial.print(irValue);
-  Serial.print(", BPM=");
-  Serial.print(beatsPerMinute);
-  Serial.print(", Avg BPM=");
-  Serial.print(beatAvg);
+	//TODO add info to json file
 
-  if (irValue < 50000)
-    Serial.print(" No finger?");
+	Serial.print("IR=");
+	Serial.print(irValue);
+	Serial.print(", BPM=");
+	Serial.print(beatsPerMinute);
+	Serial.print(", Avg BPM=");
+	Serial.print(beatAvg);
 
-  Serial.println();
+	if (irValue < 50000)
+		Serial.print(" No finger?");
+
+	Serial.println();
 }
 
 void getTempHumidity(){
+	
 	float temperature = dht.readTemperature();    // Read temperature in Celsius
 	float humidity = dht.readHumidity();          // Read humidity
 
@@ -474,6 +497,8 @@ void getTempHumidity(){
 		Serial.println("Failed to read from DHT sensor!");
 		return;
 	}
+
+	//TODO add info to json file
 
 	Serial.print("Temperature: ");
 	Serial.print(temperature);
@@ -486,31 +511,34 @@ void getTempHumidity(){
 void setup() {
 	Serial.begin(BAUD_RATE);
 	Serial.printf("Starting...\r\n");
+
+	//Set up functions
 	setupRelays();
 	setupFlipSwitches();
 	setupWiFi();
-	setup_display();
-  	// setupGoogleHomeNotifier();
+	setupDisplay();
+  	//setupGoogleHomeNotifier();
 	//GoogleHomeMessage("Office is online");
 	setupSinricPro();
-	time_setup();
-	setup_heartbeat_sensor();
+	setupTime();
+	setupHeartbeatSensor();
 	dht.begin();
 
-
+	//--Delete later--
 	//setupSQL();
 	//setup_tft();
 
-	//delay(1000);
-	//GoogleHomeMessage("Hello Eric");
+	Serial.printf("Setup done.\r\n");
 }
-
 
 void loop()
 {
 	//SinricPro.handle();
 	//handleFlipSwitches();
 	printLocalTime();
-	get_heartbeat();
+	getHeartbeat();
 	getTempHumidity();
+	//checkAlarms();
+	//TODO retrive json file to set up alarms
+	//TODO fucntion that sends everything from the json file (I guess... I'm not to sure how this will work -Axel)
 }
