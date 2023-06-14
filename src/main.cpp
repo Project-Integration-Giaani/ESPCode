@@ -346,8 +346,8 @@ void setup_firebase(){
   config.database_url = DATABASE_URL;
 
   /* Sign up */
-  //if (Firebase.signUp(&config, &auth, "", "")){
-  if (Firebase.signUp(&config, &auth, Email_database, Password_database)){
+  if (Firebase.signUp(&config, &auth, "", "")){
+  //if (Firebase.signUp(&config, &auth, Email_database, Password_database)){
     Serial.println("ok");
     signupOK = true;
   }
@@ -584,6 +584,11 @@ void sendToFirebase(String date, float temperature){
 	}
 }
 
+
+/*<-------------------------->
+  <----- MAIN FUNCTIONS ----->
+  <-------------------------->*/
+
 void setup() {
 	Serial.begin(BAUD_RATE);
 	Serial.printf("Starting...\r\n");
@@ -599,7 +604,7 @@ void setup() {
 	setupTime();
 	setupHeartbeatSensor();
 	dht.begin();
-	setup_firebase;
+	setup_firebase();
 
 	//--Delete later--
 	//setupSQL();
