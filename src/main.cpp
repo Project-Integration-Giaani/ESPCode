@@ -361,7 +361,7 @@ void setup_firebase(){
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
   Serial.println("Firebase setup done!");
-  delay(10000);
+  //delay(10000);
 }
 
 // void setupSQL()
@@ -558,7 +558,7 @@ float getTempHumidity(){
 	return temperature;
 }
 
-void sendToFirebase(String date, float temperature){
+void sendToFirebase(String date_time, float temperature){
 	if (Firebase.ready() && signupOK ){
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/name", "Ines");
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/lastname", "Barnous");
@@ -571,7 +571,10 @@ void sendToFirebase(String date, float temperature){
 		Firebase.RTDB.setFloat(&fbdo, "Clients/client1/heartbeat", beatsPerMinute);
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/fallen", "no");
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/emergency", "no");
-		Firebase.RTDB.setString(&fbdo, "Clients/client1/date", date);
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/date", date_time.c_str());
+		//Firebase.RTDB.setString(&fbdo, "Clients/client1/date", "aaaaaaaa");
+		// Serial.println(date);
+		// delay(10000);
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/reminder/title", "idk");
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/reminder/type", "idk");
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/reminder/details", "too hot to handle");
