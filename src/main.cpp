@@ -565,7 +565,7 @@ void sendToFirebase(String date_time, float temperature){
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/allergies", "Nothing");
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/room_number", "8");
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/age", "22");
-		Firebase.RTDB.setString(&fbdo, "Clients/client1/diseases", "Very hot");
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/diseases", "Very hot as hell");
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/gender", "princess");
 		Firebase.RTDB.setFloat(&fbdo, "Clients/client1/temperature", temperature);
 		Firebase.RTDB.setFloat(&fbdo, "Clients/client1/heartbeat", beatsPerMinute);
