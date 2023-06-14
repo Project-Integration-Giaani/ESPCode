@@ -65,6 +65,11 @@
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 
+//Database libraries
+#include <Firebase_ESP_Client.h>
+#include "addons/TokenHelper.h" // provide the token generation process info
+#include "addons/RTDBHelper.h" // provide the RTDB payload printing info and other helpers functions
+
 //SQl libraries
 // #include <MySQL_Connection.h>
 // #include <MySQL_Cursor.h>
@@ -79,10 +84,10 @@
 // #define WIFI_PASS "Minkmaatstraat50"
 // #define WIFI_SSID "Definitely Not A Wifi"
 // #define WIFI_PASS "jkoy3240"
-#define WIFI_SSID "D.E-CAFE-GAST"
-#define WIFI_PASS ""
-// #define WIFI_SSID "iPhone de Ines"
-// #define WIFI_PASS "inesparletropbeaucoup"
+// #define WIFI_SSID "D.E-CAFE-GAST"
+// #define WIFI_PASS ""
+#define WIFI_SSID "iPhone de Ines"
+#define WIFI_PASS "inesparletropbeaucoup"
 // #define WIFI_SSID "NESNOS"
 // #define WIFI_PASS "princessenesnos"
 // #define WIFI_SSID "AXEL_DESKTOP"
@@ -135,6 +140,22 @@ byte rateSpot = 0;
 long lastBeat = 0; //Time at which the last beat occurred
 float beatsPerMinute;
 int beatAvg;
+
+// Firebase project API key 
+#define API_KEY "AIzaSyD3DMkvWPlYfkCQbmw0vLnxymwSbmVFccw"
+
+//RTDB URL definition 
+#define DATABASE_URL "https://medical-watch-6e163-default-rtdb.europe-west1.firebasedatabase.app/"
+
+//Database objects declaration
+FirebaseData fbdo;
+FirebaseAuth auth;
+FirebaseConfig config;
+bool signupOK = false;
+
+//Database credentials
+#define Email_database "giaani022@gmail.com"
+#define Password_database "Adelinaisperfect!"
 
 typedef struct
 { // struct for the std::map below
@@ -317,6 +338,32 @@ void setupHeartbeatSensor(){
 	particleSensor.setPulseAmplitudeGreen(0); //Turn off Green LED
 }
 
+void setup_firebase(){
+	 /* Assign the api key (required) */
+  config.api_key = API_KEY;
+
+  /* Assign the RTDB URL (required) */
+  config.database_url = DATABASE_URL;
+
+  /* Sign up */
+  //if (Firebase.signUp(&config, &auth, "", "")){
+  if (Firebase.signUp(&config, &auth, Email_database, Password_database)){
+    Serial.println("ok");
+    signupOK = true;
+  }
+  else{
+    Serial.printf("%s\n", config.signer.signupError.message.c_str());
+  }
+
+  /* Assign the callback function for the long running token generation task */
+  config.token_status_callback = tokenStatusCallback; //see addons/TokenHelper.h
+  
+  Firebase.begin(&config, &auth);
+  Firebase.reconnectWiFi(true);
+  Serial.println("Firebase setup done!");
+  delay(10000);
+}
+
 // void setupSQL()
 // {
 // 	// if (!WiFi.hostByName("giaani-mysql.mysql.database.azure.com", server_addr)) {
@@ -373,16 +420,16 @@ void handleFlipSwitches()
 
 
 
-void printLocalTime() {
+String printLocalTime() {
 	struct tm timeinfo;
 	if (!getLocalTime(&timeinfo))
 	{
 		Serial.println("Failed to obtain time");
-		return;
+		return "Failed to obtain time";
 	}
 	Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
 	String daytime = asctime(&timeinfo);
-	Serial.println("The needed string:" + daytime);
+	//Serial.println("The needed string:" + daytime);
 	String day = daytime.substring(0, 11) += daytime.substring(20, 24);
 	String time = daytime.substring(11, 19);
 	//TODO change TFT to other display type
@@ -426,6 +473,7 @@ void printLocalTime() {
 	// 		alarm_set = true;
 	// 	}
 	// }
+	return daytime;
 }
 
 void checkAlarms() {
@@ -488,14 +536,14 @@ void getHeartbeat(){
 	Serial.println();
 }
 
-void getTempHumidity(){
+float getTempHumidity(){
 	
 	float temperature = dht.readTemperature();    // Read temperature in Celsius
 	float humidity = dht.readHumidity();          // Read humidity
 
 	if (isnan(temperature) || isnan(humidity)) {  // Check if any reading failed
 		Serial.println("Failed to read from DHT sensor!");
-		return;
+		return 0;
 	}
 
 	//TODO add info to json file
@@ -506,6 +554,34 @@ void getTempHumidity(){
 	Serial.print("Humidity: ");
 	Serial.print(humidity);
 	Serial.println(" %");
+
+	return temperature;
+}
+
+void sendToFirebase(String date, float temperature){
+	if (Firebase.ready() && signupOK ){
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/name", "Ines");
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/lastname", "Barnous");
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/allergies", "Nothing");
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/room_number", "8");
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/age", "22");
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/diseases", "Very hot");
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/gender", "princess");
+		Firebase.RTDB.setFloat(&fbdo, "Clients/client1/temperature", temperature);
+		Firebase.RTDB.setFloat(&fbdo, "Clients/client1/heartbeat", beatsPerMinute);
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/fallen", "no");
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/emergency", "no");
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/date", date);
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/reminder/title", "idk");
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/reminder/type", "idk");
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/reminder/details", "too hot to handle");
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/reminder/date", "idk bro");
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/reminder/time", "time to get a watch");	
+	}
+	else {
+		Serial.println("Cannot connect and write to the database");
+		delay(10000);
+	}
 }
 
 void setup() {
@@ -516,13 +592,14 @@ void setup() {
 	setupRelays();
 	setupFlipSwitches();
 	setupWiFi();
-	setupDisplay();
+	//setupDisplay();
   	//setupGoogleHomeNotifier();
 	//GoogleHomeMessage("Office is online");
 	setupSinricPro();
 	setupTime();
 	setupHeartbeatSensor();
 	dht.begin();
+	setup_firebase;
 
 	//--Delete later--
 	//setupSQL();
@@ -535,9 +612,10 @@ void loop()
 {
 	//SinricPro.handle();
 	//handleFlipSwitches();
-	printLocalTime();
+	String daytime = printLocalTime();
 	getHeartbeat();
-	getTempHumidity();
+	float temperature = getTempHumidity();
+	sendToFirebase(daytime,temperature);
 	//checkAlarms();
 	//TODO retrive json file to set up alarms
 	//TODO fucntion that sends everything from the json file (I guess... I'm not to sure how this will work -Axel)
