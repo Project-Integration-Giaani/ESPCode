@@ -75,6 +75,7 @@
 // #include <MySQL_Cursor.h>
 
 
+
 /*<-------------------------->
   <---- GLOBAL VARIABLES ---->
   <-------------------------->*/
@@ -82,12 +83,12 @@
 // ----------------------------------- Wifi credentials -----------------------------------------------------
 // #define WIFI_SSID "Minkmates"
 // #define WIFI_PASS "Minkmaatstraat50"
-// #define WIFI_SSID "Definitely Not A Wifi"
-// #define WIFI_PASS "jkoy3240"
-// #define WIFI_SSID "D.E-CAFE-GAST"
-// #define WIFI_PASS ""
-#define WIFI_SSID "iPhone de Ines"
-#define WIFI_PASS "inesparletropbeaucoup"
+//#define WIFI_SSID "Definitely Not A Wifi"
+//#define WIFI_PASS "jkoy3240"
+#define WIFI_SSID "D.E-CAFE-GAST"
+#define WIFI_PASS ""
+// #define WIFI_SSID "iPhone de Ines"
+// #define WIFI_PASS "inesparletropbeaucoup"
 // #define WIFI_SSID "NESNOS"
 // #define WIFI_PASS "princessenesnos"
 // #define WIFI_SSID "AXEL_DESKTOP"
@@ -571,10 +572,18 @@ void sendToFirebase(String date_time, float temperature){
 		Firebase.RTDB.setFloat(&fbdo, "Clients/client1/heartbeat", beatsPerMinute);
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/fallen", "no");
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/emergency", "no");
-		Firebase.RTDB.setString(&fbdo, "Clients/client1/date", date_time.c_str());
-		//Firebase.RTDB.setString(&fbdo, "Clients/client1/date", "aaaaaaaa");
-		// Serial.println(date);
-		// delay(10000);
+		if (!date_time.length() > 0) {
+  			date_time = date_time.substring(0,date_time.length()-1); // Remove the last character
+		}
+
+		String date = date_time.substring(0, 24);
+
+		if (!Firebase.RTDB.setString(&fbdo, "Clients/client1/date", date)) {
+			Serial.println("Failed to set data.");
+			Serial.println(fbdo.errorReason());
+			Serial.println("------------------------------------");
+			Serial.println();
+		}
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/reminder/title", "idk");
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/reminder/type", "idk");
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/reminder/details", "too hot to handle");
