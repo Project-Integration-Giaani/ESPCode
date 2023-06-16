@@ -75,7 +75,6 @@
 // #include <MySQL_Cursor.h>
 
 
-
 /*<-------------------------->
   <---- GLOBAL VARIABLES ---->
   <-------------------------->*/
@@ -83,12 +82,12 @@
 // ----------------------------------- Wifi credentials -----------------------------------------------------
 // #define WIFI_SSID "Minkmates"
 // #define WIFI_PASS "Minkmaatstraat50"
-//#define WIFI_SSID "Definitely Not A Wifi"
-//#define WIFI_PASS "jkoy3240"
-#define WIFI_SSID "D.E-CAFE-GAST"
-#define WIFI_PASS ""
-// #define WIFI_SSID "iPhone de Ines"
-// #define WIFI_PASS "inesparletropbeaucoup"
+// #define WIFI_SSID "Definitely Not A Wifi"
+// #define WIFI_PASS "jkoy3240"
+// #define WIFI_SSID "D.E-CAFE-GAST"
+// #define WIFI_PASS ""
+#define WIFI_SSID "iPhone de Ines"
+#define WIFI_PASS "inesparletropbeaucoup"
 // #define WIFI_SSID "NESNOS"
 // #define WIFI_PASS "princessenesnos"
 // #define WIFI_SSID "AXEL_DESKTOP"
@@ -149,6 +148,7 @@ int beatAvg;
 #define DATABASE_URL "https://medical-watch-6e163-default-rtdb.europe-west1.firebasedatabase.app/"
 
 //Database objects declaration
+unsigned long sendDataPrevMillis = 0;
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
@@ -183,7 +183,16 @@ std::map<int, flipSwitchConfig_t> flipSwitches; // this map is used to map flipS
 												// it will be setup in "setupFlipSwitches" function, using informations from devices map
 
 std::list<String> alarmList;
+ typedef struct 
+ {
+	String time;
+	String title;
+ }alarm;
 
+std::list<int> deleted_alarms;
+
+ std::list<alarm> alarmsList;
+ 
 /*<--------------------------->
   <------ USE FUNCTIONS ------>
   <--------------------------->*/
@@ -433,7 +442,11 @@ String printLocalTime() {
 	//Serial.println("The needed string:" + daytime);
 	String day = daytime.substring(0, 11) += daytime.substring(20, 24);
 	String time = daytime.substring(11, 19);
-	//TODO change TFT to other display type
+	//TODO change TFT to other display type -------done -- nesnos (i think this is how it should be done)
+	display.println(day);
+	display.println (time);
+	display.display();
+	// tft part to be deleted
 	// tft.drawString(day, 15, 10, 4);
 	// tft.drawString(time, 20, 45, 7);
 	Serial.print("Day of week: ");
@@ -485,19 +498,61 @@ void checkAlarms() {
 	}
 	String daytime = asctime(&timeinfo);
 
-	if (!alarmList.empty()) {
-		for(auto it = alarmList.begin(); alarmList.end() != it;) {
-			if (*it == daytime) {
+	if (!alarmsList.empty()) {
+		for(auto it = alarmsList.begin(); alarmsList.end() != it;) {
+			if ((*it).time == daytime) {
 				//TODO: play alarm sound
-				//TODO: Display alarm on screen
-				//TODO: Send alarm to Google Home with message taken from json file (title of alarm)
-				it = alarmList.erase(it);
+				String alarm_title;
+				Serial.println("ALARM:");
+				Serial.println((*it).title);
+				display.println("ALARM:");
+				display.println(alarm_title);
+	 			display.display();
+
+				const char* google_msg= (*it).title.c_str();
+				GoogleHomeMessage(google_msg);
+
+				int number_alarm = (*it).title[(*it).title.length()-1];
+				deleted_alarms.push_back(number_alarm);
+				it = alarmsList.erase(it);
+				String deletedAlarm = String(number_alarm);
+				
 			} else {
 				++it;
 			}
 		}
 	}
 }
+
+void retrieveAlarms(){
+	int alarm_number;
+	if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 15000 || sendDataPrevMillis == 0)) {
+    	sendDataPrevMillis = millis();
+		if ((Firebase.RTDB.getInt(&fbdo, "/clients/client1/alarms_number")) && (fbdo.dataType() == "int")) {
+		alarm_number = fbdo.intData();
+		if (alarm_number= alarmsList.size()) {
+			return;
+		} else {
+
+		}
+		}
+	}
+}
+	// if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 15000 || sendDataPrevMillis == 0)) {
+    // 				sendDataPrevMillis = millis();
+	// 				if ((Firebase.RTDB.getInt(&fbdo, "/clients/reminder/title")) && (fbdo.dataType() == "string")) {
+	// 					alarm_title = fbdo.stringData();
+	// 					Serial.println("ALARM:");
+	// 					Serial.println(alarm_title);
+	// 					display.println("ALARM:");
+	// 					display.println(alarm_title);
+	// 					display.display();
+	// 				}
+    // 			}
+	// 			else {
+	// 			Serial.println("Cannot retrieve alarm title. Reason:");
+	// 			Serial.println(fbdo.errorReason());
+	// 			}
 
 void getHeartbeat(){
 	
@@ -572,18 +627,10 @@ void sendToFirebase(String date_time, float temperature){
 		Firebase.RTDB.setFloat(&fbdo, "Clients/client1/heartbeat", beatsPerMinute);
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/fallen", "no");
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/emergency", "no");
-		if (!date_time.length() > 0) {
-  			date_time = date_time.substring(0,date_time.length()-1); // Remove the last character
-		}
-
-		String date = date_time.substring(0, 24);
-
-		if (!Firebase.RTDB.setString(&fbdo, "Clients/client1/date", date)) {
-			Serial.println("Failed to set data.");
-			Serial.println(fbdo.errorReason());
-			Serial.println("------------------------------------");
-			Serial.println();
-		}
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/date", date_time.c_str());
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/date", "aaaaaaaa");
+		// Serial.println(date);
+		// delay(10000);
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/reminder/title", "idk");
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/reminder/type", "idk");
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/reminder/details", "too hot to handle");
