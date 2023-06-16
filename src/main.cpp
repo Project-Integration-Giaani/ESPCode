@@ -141,6 +141,9 @@ byte rateSpot = 0;
 long lastBeat = 0; //Time at which the last beat occurred
 float beatsPerMinute;
 int beatAvg;
+bool isEmergency = false;
+unsigned long emergencyTime = 0;
+const unsigned long emergencyLimit =  20000; // 20 seconds
 
 // Firebase project API key 
 #define API_KEY "AIzaSyD3DMkvWPlYfkCQbmw0vLnxymwSbmVFccw"
@@ -197,8 +200,9 @@ void GoogleHomeMessage(const char* message){
 }
  
 void emergency() {
-	//TODO add to json file emergency
+	isEmergency = true;
 	//TODO emergency sound (buzzer)
+	emergencyTime = millis();
 	GoogleHomeMessage("Emergency detected, notifying nurse");
 }
 
@@ -547,8 +551,6 @@ float getTempHumidity(){
 		return 0;
 	}
 
-	//TODO add info to json file
-
 	Serial.print("Temperature: ");
 	Serial.print(temperature);
 	Serial.print(" °C\t");
@@ -571,7 +573,7 @@ void sendToFirebase(String date_time, float temperature){
 		Firebase.RTDB.setFloat(&fbdo, "Clients/client1/temperature", temperature);
 		Firebase.RTDB.setFloat(&fbdo, "Clients/client1/heartbeat", beatsPerMinute);
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/fallen", "no");
-		Firebase.RTDB.setString(&fbdo, "Clients/client1/emergency", "no");
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/emergency", isEmergency);
 		if (!date_time.length() > 0) {
   			date_time = date_time.substring(0,date_time.length()-1); // Remove the last character
 		}
@@ -635,5 +637,7 @@ void loop()
 	sendToFirebase(daytime,temperature);
 	//checkAlarms();
 	//TODO retrive json file to set up alarms
-	//TODO fucntion that sends everything from the json file (I guess... I'm not to sure how this will work -Axel)
+	if(emergency  && ((millis() - emergencyTime) >= emergencyLimit )) { //20 seconds
+		isEmergency = false; 
+	}
 }
