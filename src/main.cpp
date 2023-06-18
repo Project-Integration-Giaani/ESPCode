@@ -134,6 +134,7 @@ FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 bool signupOK = false;
+int number_retrieved_alarms = 0;
 
 //Database credentials
 #define Email_database "giaani022@gmail.com"
@@ -524,8 +525,17 @@ void checkAlarms() {
 				int number_alarm = (*it).title[(*it).title.length()-1];
 				deleted_alarms.push_back(number_alarm);
 				it = alarmsList.erase(it);
-				String deletedAlarm = String(number_alarm);
-				
+				std::string deletedAlarm = "alarm";
+				deletedAlarm.append(std::to_string(number_alarm));
+				String path_name = "/clients/client1/reminder/";
+				path_name.concat((*it).title);
+				if (Firebase.RTDB.deleteNode(&fbdo, path_name)){
+					if (fbdo.dataType() == "boolean" && fbdo.boolData()) {
+						Serial.println("Child node deleted successfully.");
+					} else {
+						Serial.println("Failed to delete child node.");
+					}
+				}	
 			} else {
 				++it;
 			}
@@ -533,20 +543,25 @@ void checkAlarms() {
 	}
 }
 
-void retrieveAlarms(){
-	int alarm_number;
-	if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 15000 || sendDataPrevMillis == 0)) {
-    	sendDataPrevMillis = millis();
-		if ((Firebase.RTDB.getInt(&fbdo, "/clients/client1/alarms_number")) && (fbdo.dataType() == "int")) {
-		alarm_number = fbdo.intData();
-		if (alarm_number= alarmsList.size()) {
-			return;
-		} else {
-
-		}
+void retrieveAlarms(int alarm_number){
+	
+	for(auto index=0; index < alarm_number; index++){
+		if(!std::any_of(deleted_alarms.begin(), deleted_alarms.end(), [&](int num) { return num == index; })){
+			String path_name = "Clients/client1/reminder/alarm";
+			alarm new_alarm;
+			path_name.concat(String(index));
+			if ((Firebase.RTDB.getString(&fbdo, path_name.concat("/title"))) && (fbdo.dataType() == "string")){
+				new_alarm.title=fbdo.stringData();
+			}
+			if ((Firebase.RTDB.getString(&fbdo, path_name.concat("/date"))) && (fbdo.dataType() == "string")){
+				new_alarm.time=fbdo.stringData();
+			}
+			alarmsList.push_back(new_alarm);
 		}
 	}
 }
+		
+
 	// if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 15000 || sendDataPrevMillis == 0)) {
     // 				sendDataPrevMillis = millis();
 	// 				if ((Firebase.RTDB.getInt(&fbdo, "/clients/reminder/title")) && (fbdo.dataType() == "string")) {
@@ -632,10 +647,7 @@ void sendToFirebase(String date_time, float temperature){
 		Firebase.RTDB.setFloat(&fbdo, "Clients/client1/heartbeat", beatsPerMinute);
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/fallen", "no");
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/emergency", isEmergency);
-		if (!date_time.length() > 0) {
-  			date_time = date_time.substring(0,date_time.length()-1); // Remove the last character
-		}
-
+		
 		String date = date_time.substring(0, 24);
 
 		if (!Firebase.RTDB.setString(&fbdo, "Clients/client1/date", date)) {
@@ -695,6 +707,16 @@ void loop()
 	getHeartbeat();
 	float temperature = getTempHumidity();
 	sendToFirebase(daytime,temperature);
+	int alarm_number;
+	if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 15000 || sendDataPrevMillis == 0)) {
+    	sendDataPrevMillis = millis();
+		if ((Firebase.RTDB.getInt(&fbdo, "/clients/client1/alarms_number")) && (fbdo.dataType() == "int")) {
+		alarm_number = fbdo.intData();
+		if (alarm_number != number_retrieved_alarms) {
+			retrieveAlarms(alarm_number);
+		}
+		}
+	}
 	//checkAlarms();
 	//TODO retrive json file to set up alarms - testing
 	if(emergency  && ((millis() - emergencyTime) >= emergencyLimit )) { //20 seconds
