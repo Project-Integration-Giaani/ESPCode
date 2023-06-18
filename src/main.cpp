@@ -61,10 +61,10 @@
 // #define WIFI_PASS "Minkmaatstraat50"
 // #define WIFI_SSID "Definitely Not A Wifi"
 // #define WIFI_PASS "jkoy3240"
-// #define WIFI_SSID "D.E-CAFE-GAST"
-// #define WIFI_PASS ""
-#define WIFI_SSID "iPhone de Ines"
-#define WIFI_PASS "inesparletropbeaucoup"
+#define WIFI_SSID "D.E-CAFE-GAST"
+#define WIFI_PASS ""
+// #define WIFI_SSID "iPhone de Ines"
+// #define WIFI_PASS "inesparletropbeaucoup"
 // #define WIFI_SSID "NESNOS"
 // #define WIFI_PASS "princessenesnos"
 // #define WIFI_SSID "AXEL_DESKTOP"
@@ -105,8 +105,13 @@ GoogleHomeNotifier ghn;
 // TFT_eSPI tft = TFT_eSPI();
 
 bool alarm_set = false;
+int alarm_number;
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+bool displayAvailable = true;
+unsigned long displayTime = 0;
+#define ALARMTIME 10000
+
 
 DHT dht(DHTPIN, DHTTYPE); // Initialize the DHT sensor
 
@@ -116,8 +121,8 @@ const byte RATE_SIZE = 4; //Increase this for more averaging. 4 is good.
 byte rates[RATE_SIZE]; //Array of heart rates
 byte rateSpot = 0;
 long lastBeat = 0; //Time at which the last beat occurred
-float beatsPerMinute;
 int beatAvg;
+float beatsPerMinute;
 bool isEmergency = false;
 unsigned long emergencyTime = 0;
 const unsigned long emergencyLimit =  20000; // 20 seconds
@@ -171,11 +176,11 @@ std::list<String> alarmList;
  {
 	String time;
 	String title;
- }alarm;
+ } alarmStruct;
 
 std::list<int> deleted_alarms;
 
- std::list<alarm> alarmsList;
+ std::list<alarmStruct> alarmsList;
  
 /*<--------------------------->
   <------ USE FUNCTIONS ------>
@@ -304,14 +309,12 @@ void setupDisplay(){
 		Serial.println(F("SSD1306 allocation failed"));
 		for(;;);
   	}
-	delay(2000);
 	display.clearDisplay();
-
 	display.setTextSize(1);
 	display.setTextColor(WHITE);
 	display.setCursor(0, 0);
 	// Display static text
-	display.println("I work 2");
+	display.println("Starting up...");
 	display.display(); 
 	delay(100);
 }
@@ -453,28 +456,34 @@ String printLocalTime() {
 	//Serial.println("The needed string:" + daytime);
 	String day = daytime.substring(0, 11) += daytime.substring(20, 24);
 	String time = daytime.substring(11, 19);
-	display.println(day);
-	display.println (time);
-	display.display();
+	if (displayAvailable) {
+		display.clearDisplay();
+		display.setTextSize(2);
+		display.setTextColor(WHITE);
+		display.setCursor(0, 5);
+		display.println(day);
+		display.println (time);
+		display.display();
+	}
 	// tft part to be deleted
 	// tft.drawString(day, 15, 10, 4);
 	// tft.drawString(time, 20, 45, 7);
-	Serial.print("Day of week: ");
-	Serial.println(&timeinfo, "%A");
-	Serial.print("Month: ");
-	Serial.println(&timeinfo, "%B");
-	Serial.print("Day of Month: ");
-	Serial.println(&timeinfo, "%d");
-	Serial.print("Year: ");
-	Serial.println(&timeinfo, "%Y");
-	Serial.print("Hour: ");
-	Serial.println(&timeinfo, "%H");
-	Serial.print("Hour (12 hour format): ");
-	Serial.println(&timeinfo, "%I");
-	Serial.print("Minute: ");
-	Serial.println(&timeinfo, "%M");
-	Serial.print("Second: ");
-	Serial.println(&timeinfo, "%S");
+	// Serial.print("Day of week: ");
+	// Serial.println(&timeinfo, "%A");
+	// Serial.print("Month: ");
+	// Serial.println(&timeinfo, "%B");
+	// Serial.print("Day of Month: ");
+	// Serial.println(&timeinfo, "%d");
+	// Serial.print("Year: ");
+	// Serial.println(&timeinfo, "%Y");
+	// Serial.print("Hour: ");
+	// Serial.println(&timeinfo, "%H");
+	// Serial.print("Hour (12 hour format): ");
+	// Serial.println(&timeinfo, "%I");
+	// Serial.print("Minute: ");
+	// Serial.println(&timeinfo, "%M");
+	// Serial.print("Second: ");
+	// Serial.println(&timeinfo, "%S");
 	char timeWeekDay[10];
 	strftime(timeWeekDay, 10, "%A", &timeinfo);
 	Serial.println(timeWeekDay);
@@ -507,28 +516,43 @@ void checkAlarms() {
 		return;
 	}
 	String daytime = asctime(&timeinfo);
+	daytime = daytime.substring(0, 24); 
 
 	if (!alarmsList.empty()) {
-		for(auto it = alarmsList.begin(); alarmsList.end() != it;) {
+		Serial.println("Alarms not empty");
+		auto index = 0;
+		for(auto it = alarmsList.begin(); alarmsList.end() != it; index++) {
+			Serial.println("ALARM:");
+			Serial.println((*it).title);
+			Serial.println("TIME:");
+			Serial.println((*it).time);
 			if ((*it).time == daytime) {
 				//TODO: play alarm sound
 				String alarm_title;
 				Serial.println("ALARM:");
 				Serial.println((*it).title);
-				display.println("ALARM:");
-				display.println(alarm_title);
-	 			display.display();
+				if (displayAvailable) {
+					display.clearDisplay();
+					display.setTextSize(1);
+					display.setTextColor(WHITE);
+					display.setCursor(0, 0);
+					display.println("ALARM:");
+					display.println((*it).title);
+					display.display();
+					displayTime = millis();
+					displayAvailable = false;
+				}
 
 				const char* google_msg= (*it).title.c_str();
 				GoogleHomeMessage(google_msg);
 
-				int number_alarm = (*it).title[(*it).title.length()-1];
-				deleted_alarms.push_back(number_alarm);
+				Serial.println("Number alarm:");
+				Serial.println(index);
+				deleted_alarms.push_back(index);
 				it = alarmsList.erase(it);
-				std::string deletedAlarm = "alarm";
-				deletedAlarm.append(std::to_string(number_alarm));
-				String path_name = "/clients/client1/reminder/";
-				path_name.concat((*it).title);
+				
+				String path_name = "Clients/client1/alarms/";
+				path_name.concat(String(index));
 				if (Firebase.RTDB.deleteNode(&fbdo, path_name)){
 					if (fbdo.dataType() == "boolean" && fbdo.boolData()) {
 						Serial.println("Child node deleted successfully.");
@@ -544,21 +568,42 @@ void checkAlarms() {
 }
 
 void retrieveAlarms(int alarm_number){
-	
+	//printing the elements of deleted_alarms
 	for(auto index=0; index < alarm_number; index++){
 		if(!std::any_of(deleted_alarms.begin(), deleted_alarms.end(), [&](int num) { return num == index; })){
-			String path_name = "Clients/client1/reminder/alarm";
-			alarm new_alarm;
-			path_name.concat(String(index));
-			if ((Firebase.RTDB.getString(&fbdo, path_name.concat("/title"))) && (fbdo.dataType() == "string")){
+			String title_path = "Clients/client1/alarms/";
+			String time_path = "Clients/client1/alarms/";
+			time_path.concat(String(index));
+			title_path.concat(String(index));
+			title_path.concat("/title");
+			time_path.concat("/date");
+			alarmStruct new_alarm;
+			
+			if ((Firebase.RTDB.getString(&fbdo, title_path)) && (fbdo.dataType() == "string")){
 				new_alarm.title=fbdo.stringData();
+				// Serial.println("Alarm title: ");
+				// Serial.println(new_alarm.title);
+			} else {
+				Serial.println("Failed to obtain alarm title");
+				Serial.println(fbdo.errorReason());
 			}
-			if ((Firebase.RTDB.getString(&fbdo, path_name.concat("/date"))) && (fbdo.dataType() == "string")){
+			if ((Firebase.RTDB.getString(&fbdo, time_path)) && (fbdo.dataType() == "string")){
 				new_alarm.time=fbdo.stringData();
+			} else {
+				Serial.println("Failed to obtain alarm time");
+				Serial.println(fbdo.errorReason());
 			}
 			alarmsList.push_back(new_alarm);
+			number_retrieved_alarms = alarm_number;
 		}
 	}
+
+	// for loop that prints all the titles in the alarms
+	// Serial.println("Checking alarms list:");
+	// for(auto it = alarmsList.begin(); alarmsList.end() != it; ++it) {
+	// 	Serial.println("ALARM:");
+	// 	Serial.println((*it).title);
+	// }
 }
 		
 
@@ -578,11 +623,11 @@ void retrieveAlarms(int alarm_number){
 	// 			Serial.println(fbdo.errorReason());
 	// 			}
 
-void getHeartbeat(){
+float getHeartbeat(){
 	//TODO if possible make beatsPerMinute not a global variable
 	long irValue = particleSensor.getIR();
 
-	if (checkForBeat(irValue) == true){
+	if (checkForBeat(irValue)){
 		//We sensed a beat!
 		long delta = millis() - lastBeat;
 		lastBeat = millis();
@@ -612,6 +657,7 @@ void getHeartbeat(){
 		Serial.print(" No finger?");
 
 	Serial.println();
+	return beatsPerMinute;
 }
 
 float getTempHumidity(){
@@ -634,7 +680,7 @@ float getTempHumidity(){
 	return temperature;
 }
 
-void sendToFirebase(String date_time, float temperature){
+void sendToFirebase(String date_time, float temperature, float heartbeat){
 	if (Firebase.ready() && signupOK ){
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/name", "Ines");
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/lastname", "Barnous");
@@ -644,7 +690,7 @@ void sendToFirebase(String date_time, float temperature){
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/diseases", "Very hot as hell");
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/gender", "princess");
 		Firebase.RTDB.setFloat(&fbdo, "Clients/client1/temperature", temperature);
-		Firebase.RTDB.setFloat(&fbdo, "Clients/client1/heartbeat", beatsPerMinute);
+		Firebase.RTDB.setFloat(&fbdo, "Clients/client1/heartbeat", heartbeat);
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/fallen", "no");
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/emergency", isEmergency);
 		
@@ -681,7 +727,7 @@ void setup() {
 	setupRelays();
 	setupFlipSwitches();
 	setupWiFi();
-	//setupDisplay();
+	setupDisplay();
   	//setupGoogleHomeNotifier();
 	//GoogleHomeMessage("Office is online");
 	setupSinricPro();
@@ -699,27 +745,42 @@ void setup() {
 
 void loop()
 {
-	//SinricPro.handle();
-	//TODO ask for temperature and humidity
 	//TODO fix heartbeat sensor
+	//SinricPro.handle();
 	//handleFlipSwitches();
 	String daytime = printLocalTime();
-	getHeartbeat();
+	float heartbeat = getHeartbeat();
 	float temperature = getTempHumidity();
-	sendToFirebase(daytime,temperature);
-	int alarm_number;
-	if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 15000 || sendDataPrevMillis == 0)) {
+	//int alarm_number;
+	
+	if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 10000 || sendDataPrevMillis == 0)) {
+		//.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         Serial.println("I AM HERE");
+		sendToFirebase(daytime,temperature,heartbeat);
     	sendDataPrevMillis = millis();
-		if ((Firebase.RTDB.getInt(&fbdo, "/clients/client1/alarms_number")) && (fbdo.dataType() == "int")) {
-		alarm_number = fbdo.intData();
-		if (alarm_number != number_retrieved_alarms) {
-			retrieveAlarms(alarm_number);
-		}
+		// bool response=Firebase.RTDB.getInt(&fbdo, "Clients/client1/alarms_number");
+		// if (!Firebase.RTDB.getInt(&fbdo, "Clients/client1/alarms_number"))
+		// 	Serial.println(fbdo.errorReason());
+		// Serial.print("Response of get int: ");
+		// Serial.println(response);
+		// Serial.print("Data type: ");
+		// Serial.println(fbdo.dataType());
+		// Serial.print("Data: ");
+		// Serial.println(fbdo.intData());
+		if ((Firebase.RTDB.getInt(&fbdo, "Clients/client1/alarms_number")) && (fbdo.dataType() == "int")) {
+			Serial.println("Retrieving alarms number");
+			alarm_number = fbdo.intData();
+			if (alarm_number != number_retrieved_alarms) {
+				retrieveAlarms(alarm_number);
+			}
 		}
 	}
-	//checkAlarms();
+	checkAlarms();
 	//TODO retrive json file to set up alarms - testing
 	if(emergency  && ((millis() - emergencyTime) >= emergencyLimit )) { //20 seconds
 		isEmergency = false; 
+	}
+	Serial.println(millis()-displayTime);
+	if((millis() - displayTime) >= ALARMTIME) { //20 seconds
+		displayAvailable = true; 
 	}
 }
