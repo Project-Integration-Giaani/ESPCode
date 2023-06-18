@@ -1,28 +1,5 @@
-/*
- * ADVANCED example for: how to use up to N SinricPro Switch devices on one ESP module
- *                       to control N relays and N flipSwitches for manually control:
- * - setup N SinricPro switch devices
- * - setup N relays
- * - setup N flipSwitches to control relays manually
- *   (flipSwitch can be a tactile button or a toggle switch and is setup in line #52)
- *
- * - handle request using just one callback to switch relay
- * - handle flipSwitches to switch relays manually and send event to sinricPro server
- *
- * - SinricPro deviceId and PIN configuration for relays and buttins is done in std::map<String, deviceConfig_t> devices
- *
- * If you encounter any issues:
- * - check the readme.md at https://github.com/sinricpro/esp8266-esp32-sdk/blob/master/README.md
- * - ensure all dependent libraries are installed
- *   - see https://github.com/sinricpro/esp8266-esp32-sdk/blob/master/README.md#arduinoide
- *   - see https://github.com/sinricpro/esp8266-esp32-sdk/blob/master/README.md#dependencies
- * - open serial monitor and check whats happening
- * - check full user documentation at https://sinricpro.github.io/esp8266-esp32-sdk
- * - visit https://github.com/sinricpro/esp8266-esp32-sdk/issues and check for existing issues or open a new one
- */
-
 // Uncomment the following line to enable serial debug output
-// #define ENABLE_DEBUG
+#define ENABLE_DEBUG
 
 #ifdef ENABLE_DEBUG
 #define DEBUG_ESP_PORT Serial
@@ -121,6 +98,7 @@
 
 
 #define EMERGENCY_PIN 32
+#define TEMPERATURE_PIN 33
 
 GoogleHomeNotifier ghn;
 
@@ -173,7 +151,9 @@ typedef struct
 // right now we have 4 devicesIds going to 4 relays and 4 flip switches to switch the relay manually
 std::map<String, deviceConfig_t> devices = {
 	//{deviceId, {relayPIN,  flipSwitchPIN}}
-	{"645e4cd6929949c1da656545", {EMERGENCY_PIN, 17}}};
+	{"645e4cd6929949c1da656545", {EMERGENCY_PIN, 17}}
+	// {"5f9e4cd6929949c1da656545", {EMERGENCY_PIN, 15}}
+	};
 
 typedef struct
 { // struct for the std::map below
@@ -221,8 +201,32 @@ bool onPowerState(String deviceId, bool &state)
 	int relayPIN = devices[deviceId].relayPIN; // get the relay pin for corresponding device
 	digitalWrite(relayPIN, !state);			   // set the new relay state
 
-	if (relayPIN == EMERGENCY_PIN && state == true) {
+	if (relayPIN == EMERGENCY_PIN && state) {
 		emergency();
+	}
+
+	if (relayPIN == TEMPERATURE_PIN && state) {
+		float temp = dht.readTemperature();
+		float humidity = dht.readHumidity();
+		char message[100];
+
+		sprintf(message, "Current temperature is %.2f and humidity is %.2f", temp, humidity);
+		Serial.println("------------------");
+		Serial.println(message);
+		Serial.println("------------------");	
+
+		//GoogleHomeMessage(message);
+
+
+		//				----- Code to turn off the temperature_pin ------
+		// The pin should turn off by itself this is done through sinrin but incase it doesn't there is this code
+
+		// int relayPIN = devices[deviceId].relayPIN;			   // get the relayPIN from config
+		// bool newRelayState = !digitalRead(relayPIN);		   // set the new relay State which should be flase
+		// digitalWrite(relayPIN, newRelayState);				   // set the trelay to the new state (false)
+
+		// SinricProSwitch &mySwitch = SinricPro[deviceId]; // get Switch device from SinricPro
+		// mySwitch.sendPowerStateEvent(!newRelayState);	 // send the event
 	}
 	
 	return true;
@@ -428,6 +432,8 @@ void handleFlipSwitches()
 #endif
 				flipSwitch.second.lastFlipSwitchState = flipSwitchState; // update lastFlipSwitchState
 			}
+		} else {
+			break;
 		}
 	}
 }
@@ -446,7 +452,6 @@ String printLocalTime() {
 	//Serial.println("The needed string:" + daytime);
 	String day = daytime.substring(0, 11) += daytime.substring(20, 24);
 	String time = daytime.substring(11, 19);
-	//TODO change TFT to other display type -------done -- nesnos (i think this is how it should be done)
 	display.println(day);
 	display.println (time);
 	display.display();
@@ -559,7 +564,7 @@ void retrieveAlarms(){
 	// 			}
 
 void getHeartbeat(){
-	
+	//TODO if possible make beatsPerMinute not a global variable
 	long irValue = particleSensor.getIR();
 
 	if (checkForBeat(irValue) == true){
@@ -580,8 +585,6 @@ void getHeartbeat(){
 			beatAvg /= RATE_SIZE;
 		}
   	}
-
-	//TODO add info to json file
 
 	Serial.print("IR=");
 	Serial.print(irValue);
@@ -685,13 +688,15 @@ void setup() {
 void loop()
 {
 	//SinricPro.handle();
+	//TODO ask for temperature and humidity
+	//TODO fix heartbeat sensor
 	//handleFlipSwitches();
 	String daytime = printLocalTime();
 	getHeartbeat();
 	float temperature = getTempHumidity();
 	sendToFirebase(daytime,temperature);
 	//checkAlarms();
-	//TODO retrive json file to set up alarms
+	//TODO retrive json file to set up alarms - testing
 	if(emergency  && ((millis() - emergencyTime) >= emergencyLimit )) { //20 seconds
 		isEmergency = false; 
 	}
