@@ -745,7 +745,6 @@ void setup() {
 
 void loop()
 {
-	//TODO fix heartbeat sensor
 	//SinricPro.handle();
 	//handleFlipSwitches();
 	String daytime = printLocalTime();
@@ -775,7 +774,6 @@ void loop()
 		}
 	}
 	checkAlarms();
-	//TODO retrive json file to set up alarms - testing
 	if(emergency  && ((millis() - emergencyTime) >= emergencyLimit )) { //20 seconds
 		isEmergency = false; 
 	}
@@ -784,3 +782,4 @@ void loop()
 		displayAvailable = true; 
 	}
 }
+// Todo test google home with the rest of all the components
