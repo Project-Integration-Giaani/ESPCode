@@ -783,4 +783,8 @@ void loop()
 	if((millis() - displayTime) >= ALARMTIME) { //20 seconds
 		displayAvailable = true; 
 	}
+
+	if (heartbeat > 110) {
+		emergency();
+	}
 }
