@@ -59,10 +59,10 @@
 // ----------------------------------- Wifi credentials -----------------------------------------------------
 // #define WIFI_SSID "Minkmates"
 // #define WIFI_PASS "Minkmaatstraat50"
-// #define WIFI_SSID "Definitely Not A Wifi"
-// #define WIFI_PASS "jkoy3240"
-#define WIFI_SSID "D.E-CAFE-GAST"
-#define WIFI_PASS ""
+#define WIFI_SSID "Definitely Not A Wifi"
+#define WIFI_PASS "jkoy3240"
+// #define WIFI_SSID "D.E-CAFE-GAST"
+// #define WIFI_PASS ""
 // #define WIFI_SSID "iPhone de Ines"
 // #define WIFI_PASS "inesparletropbeaucoup"
 // #define WIFI_SSID "NESNOS"
@@ -461,6 +461,7 @@ String printLocalTime() {
 	String day = daytime.substring(0, 11) += daytime.substring(20, 24);
 	String time = daytime.substring(11, 19);
 	if (displayAvailable) {
+		Serial.println("Display printing time");
 		display.clearDisplay();
 		display.setTextSize(2);
 		display.setTextColor(WHITE);
@@ -526,10 +527,10 @@ void checkAlarms() {
 		Serial.println("Alarms not empty");
 		auto index = 0;
 		for(auto it = alarmsList.begin(); alarmsList.end() != it; index++) {
-			Serial.println("ALARM:");
-			Serial.println((*it).title);
-			Serial.println("TIME:");
-			Serial.println((*it).time);
+			// Serial.println("ALARM:");
+			// Serial.println((*it).title);
+			// Serial.println("TIME:");
+			// Serial.println((*it).time);
 			if ((*it).time == daytime) {
 				//TODO: play alarm sound
 				String alarm_title;
@@ -696,7 +697,7 @@ void sendToFirebase(String date_time, float temperature, float heartbeat){
 		Firebase.RTDB.setFloat(&fbdo, "Clients/client1/temperature", temperature);
 		Firebase.RTDB.setFloat(&fbdo, "Clients/client1/heartbeat", heartbeat);
 		Firebase.RTDB.setString(&fbdo, "Clients/client1/fallen", "no");
-		Firebase.RTDB.setString(&fbdo, "Clients/client1/emergency", isEmergency);
+		// Firebase.RTDB.setString(&fbdo, "Clients/client1/emergency", isEmergency);
 		
 		String date = date_time.substring(0, 24);
 
@@ -779,9 +780,12 @@ void loop()
 	}
 	checkAlarms();
 	if(emergency  && ((millis() - emergencyTime) >= emergencyLimit )) { //20 seconds
-		isEmergency = false; 
+		if (Firebase.ready() && signupOK ){
+			Firebase.RTDB.setString(&fbdo, "Clients/client1/emergency/status", isEmergency);
+			isEmergency = false; 
+		}
 	}
-	Serial.println(millis()-displayTime);
+	//Serial.println(millis()-displayTime);
 	if((millis() - displayTime) >= ALARMTIME) { //20 seconds
 		displayAvailable = true; 
 	}
