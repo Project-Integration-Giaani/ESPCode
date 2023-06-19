@@ -787,7 +787,7 @@ void loop()
 	}
 
 	if (heartbeat > 110) {
-		emergency();
+		emergency("Patient's heartbeat is getting too high");	
 	}
 }
 // Todo test google home with the rest of all the components
