@@ -194,11 +194,15 @@ void GoogleHomeMessage(const char* message){
   Serial.println("Google Home Notifier meesage sent sccessfully.");
 }
  
-void emergency() {
+void emergency(const char* emergency_title) {
 	isEmergency = true;
 	//TODO emergency sound (buzzer)
 	emergencyTime = millis();
 	GoogleHomeMessage("Emergency detected, notifying nurse");
+	if (Firebase.ready() && signupOK ){
+		Firebase.RTDB.setString(&fbdo, "Clients/client1/emergency/status", isEmergency);
+		Firebase.RTDB.setString(&fbdo,"Clients/client1/emergency/title", emergency_title);
+	}
 }
 
 bool onPowerState(String deviceId, bool &state)
@@ -208,7 +212,7 @@ bool onPowerState(String deviceId, bool &state)
 	digitalWrite(relayPIN, !state);			   // set the new relay state
 
 	if (relayPIN == EMERGENCY_PIN && state) {
-		emergency();
+		emergency("Patient calling for help");
 	}
 
 	if (relayPIN == TEMPERATURE_PIN && state) {
@@ -745,7 +749,6 @@ void setup() {
 
 void loop()
 {
-	//TODO fix heartbeat sensor
 	//SinricPro.handle();
 	//handleFlipSwitches();
 	String daytime = printLocalTime();
@@ -775,7 +778,6 @@ void loop()
 		}
 	}
 	checkAlarms();
-	//TODO retrive json file to set up alarms - testing
 	if(emergency  && ((millis() - emergencyTime) >= emergencyLimit )) { //20 seconds
 		isEmergency = false; 
 	}
@@ -788,3 +790,4 @@ void loop()
 		emergency();
 	}
 }
+// Todo test google home with the rest of all the components
