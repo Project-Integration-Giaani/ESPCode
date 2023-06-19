@@ -462,13 +462,13 @@ String printLocalTime() {
 	String time = daytime.substring(11, 19);
 	if (displayAvailable) {
 		Serial.println("Display printing time");
-		display.clearDisplay();
+		//display.clearDisplay();
 		display.setTextSize(2);
 		display.setTextColor(WHITE);
 		display.setCursor(0, 5);
 		display.println(day);
 		display.println (time);
-		display.display();
+		//display.display();
 	}
 	// tft part to be deleted
 	// tft.drawString(day, 15, 10, 4);
@@ -537,13 +537,13 @@ void checkAlarms() {
 				Serial.println("ALARM:");
 				Serial.println((*it).title);
 				if (displayAvailable) {
-					display.clearDisplay();
+					//display.clearDisplay();
 					display.setTextSize(1);
 					display.setTextColor(WHITE);
 					display.setCursor(0, 0);
 					display.println("ALARM:");
 					display.println((*it).title);
-					display.display();
+					//display.display();
 					displayTime = millis();
 					displayAvailable = false;
 				}
@@ -662,6 +662,10 @@ float getHeartbeat(){
 		Serial.print(" No finger?");
 
 	Serial.println();
+	if (displayAvailable){
+		display.print("Heartbeat: ");
+		display.println(beatsPerMinute);
+	}
 	return beatsPerMinute;
 }
 
@@ -681,6 +685,11 @@ float getTempHumidity(){
 	Serial.print("Humidity: ");
 	Serial.print(humidity);
 	Serial.println(" %");
+
+	if (displayAvailable){
+		display.print("Temperature: ");
+		display.println(temperature);
+	}
 
 	return temperature;
 }
@@ -750,6 +759,7 @@ void setup() {
 
 void loop()
 {
+	display.clearDisplay();
 	//SinricPro.handle();
 	//handleFlipSwitches();
 	String daytime = printLocalTime();
@@ -793,5 +803,6 @@ void loop()
 	if (heartbeat > 110) {
 		emergency("Patient's heartbeat is getting too high");	
 	}
+	display.display();
 }
 // Todo test google home with the rest of all the components
